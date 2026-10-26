@@ -1,0 +1,9 @@
+{
+  "name": "บันทึกยอดขายร้านอาหาร",
+  "short_name": "ยอดขายร้าน",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f5",
+  "theme_color": "#166534",
+  "lang": "th"
+}

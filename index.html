@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#166534">
+<title>บันทึกยอดขายร้านอาหาร</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#17211b;background:#f5f7f5;--green:#166534;--pale:#e8f4eb;--line:#dce5dd}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:12px 14px;background:var(--green);color:white;font-weight:650}button.secondary{background:#e8eee9;color:#183b25}button.danger{background:#a52828}button:disabled{opacity:.5;cursor:not-allowed}
+header{background:var(--green);color:white;padding:18px 16px 20px}header h1{font-size:1.25rem;margin:0 0 4px}header p{margin:0;opacity:.85;font-size:.9rem}
+main{max-width:760px;margin:auto;padding:14px;display:grid;gap:14px}.card{background:white;border:1px solid var(--line);border-radius:18px;padding:15px;box-shadow:0 2px 8px #102c1010}.card h2{font-size:1.05rem;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:grid;gap:5px;margin-bottom:10px}.field label{font-size:.88rem;color:#47554b}input,select{width:100%;border:1px solid #cbd6cd;border-radius:10px;padding:11px;background:white;color:#17211b;min-width:0}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:var(--pale);padding:13px;border-radius:14px}.stat small{display:block;color:#42624b}.stat strong{font-size:1.35rem;display:block;margin-top:4px;overflow-wrap:anywhere}.muted{color:#68766b;font-size:.85rem}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.menu-list{display:grid;gap:8px}.menu-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px}.menu-item small{display:block;color:#68766b}.qty{display:flex;align-items:center;gap:8px}.qty button{padding:7px 11px}.qty span{min-width:18px;text-align:center;font-weight:700}.list{display:grid;gap:8px}.entry{border:1px solid var(--line);border-radius:12px;padding:11px}.entry h3{font-size:.96rem;margin:0 0 4px}.entry p{margin:3px 0}.entry .amount{font-weight:750}.notice{background:#fff6d9;border:1px solid #ead58c;color:#604c0d;padding:11px;border-radius:12px;font-size:.9rem}.success{color:#176a32}.error{color:#a52828;white-space:pre-wrap}.hidden{display:none!important}.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:2px}.tabs button{white-space:nowrap}.tabs button.active{background:#0f4322}.total{font-size:1.25rem;font-weight:800}.footer{padding:4px 0 22px;text-align:center;color:#778279;font-size:.8rem}
+.dategrid{display:grid;grid-template-columns:.8fr 1.7fr 1fr;gap:8px}.entry.void{opacity:.55}.entry.void h3{text-decoration:line-through}.entry>button{margin-top:6px}
+@media(min-width:650px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header><h1>🍜 บันทึกยอดขายร้านอาหาร</h1><p>ข้าวต้ม · ข้าวแห้ง · ก๋วยเตี๋ยว</p></header>
+<main>
+<section class="card wide" id="setupCard">
+<h2>เชื่อมต่อฐานข้อมูลร้าน</h2>
+<p class="muted">ระบบนี้ใช้ Supabase เพื่อให้หลายคนบันทึกข้อมูลชุดเดียวกันได้จากคนละมือถือ ต้องตั้งค่าโปรเจกต์ก่อนใช้งานครั้งแรก</p>
+<div class="grid">
+<div class="field"><label for="supabaseUrl">Supabase Project URL</label><input id="supabaseUrl" placeholder="https://xxxx.supabase.co" autocomplete="url"></div>
+<div class="field"><label for="supabaseKey">Supabase anon/publishable key</label><input id="supabaseKey" placeholder="sb_publishable_..." autocomplete="off"></div>
+</div>
+<button id="saveConfig">บันทึกการตั้งค่าในเครื่องนี้</button>
+<p class="muted">ใส่เฉพาะ publishable/anon key เท่านั้น ห้ามใส่ service_role key</p>
+<div id="configMsg" class="muted"></div>
+</section>
+
+<section class="card wide" id="authCard">
+<h2>เข้าสู่ระบบร้าน</h2>
+<p class="muted">ผู้ใช้แต่ละคนควรมีบัญชีของตัวเอง เพื่อให้ตรวจสอบได้ว่าใครเป็นผู้บันทึกรายการ</p>
+<div class="grid">
+<div class="field"><label for="email">อีเมล</label><input id="email" type="email" placeholder="name@example.com" autocomplete="username"></div>
+<div class="field"><label for="password">รหัสผ่าน</label><input id="password" type="password" placeholder="อย่างน้อย 6 ตัว" autocomplete="current-password"></div>
+</div>
+<div class="row"><button id="signIn">เข้าสู่ระบบ</button><button id="signUp" class="secondary">สร้างบัญชี</button><button id="signOut" class="secondary hidden">ออกจากระบบ</button></div>
+<div id="authMsg" class="muted"></div>
+</section>
+
+<section class="card wide hidden" id="pendingCard"><h2>รอการอนุมัติ</h2><p class="muted" id="pendingTxt"></p><button id="claimOwner" class="hidden">ตั้งบัญชีนี้เป็นเจ้าของร้าน</button></section>
+
+<section class="card wide hidden" id="appCard">
+<div class="row"><div><h2 style="margin-bottom:4px">ภาพรวมยอดขาย</h2><div class="muted" id="signedInAs"></div></div><button id="refresh" class="secondary">รีเฟรช</button></div>
+<div class="field" style="margin-top:12px"><label>วันที่ (วัน เดือน ปี พ.ศ.)</label><div class="dategrid"><select id="dd" aria-label="วัน"></select><select id="mm" aria-label="เดือน"></select><select id="yy" aria-label="ปี พ.ศ."></select></div></div><div class="field"><label for="period">ช่วงเวลาที่ดู</label><select id="period"><option value="day">วันที่เลือก</option><option value="week">7 วันถึงวันที่เลือก</option><option value="month">ทั้งเดือนของวันที่เลือก</option></select></div>
+<div class="stats">
+<div class="stat"><small>ยอดขายรวม</small><strong id="grossTotal">฿0.00</strong></div>
+<div class="stat"><small>จำนวนที่ขาย (ชิ้น/ชาม)</small><strong id="itemCount">0</strong></div>
+<div class="stat"><small>เงินสด</small><strong id="cashTotal">฿0.00</strong></div>
+<div class="stat"><small>เงินโอน</small><strong id="transferTotal">฿0.00</strong></div>
+</div>
+</section>
+
+<section class="card wide hidden" id="summaryCard"><h2>สรุปยอดแยกตามเมนู <small class="muted pl"></small></h2><div id="menuSummary" class="list"></div></section>
+
+<section class="card hidden" id="menuCard">
+<h2>1. บันทึกยอดขายตามเมนู</h2>
+<div class="field"><label for="payment">รับเงินด้วย</label><select id="payment"><option value="cash">เงินสด</option><option value="transfer">เงินโอน</option><option value="other">อื่น ๆ</option></select></div>
+<div class="field"><label for="note">หมายเหตุ (ไม่บังคับ)</label><input id="note" placeholder="เช่น โต๊ะ 3 / กลับบ้าน"></div>
+<div id="menuList" class="menu-list"><p class="muted">กำลังโหลดเมนู…</p></div>
+<div class="row" style="margin-top:14px"><div><div class="muted">ยอดรายการนี้</div><div class="total" id="cartTotal">฿0.00</div></div><button id="saveSale">บันทึกยอดขาย</button></div>
+<p id="saleMsg" class="muted"></p>
+</section>
+
+<section class="card hidden" id="historyCard">
+<div class="row"><h2>2. รายการขาย <small class="muted pl"></small></h2><div class="qty" style="flex-wrap:wrap;justify-content:flex-end"><button id="exportCsv" class="secondary">ส่งออก CSV</button></div></div>
+<div id="salesList" class="list"><p class="muted">ยังไม่มีรายการ</p></div>
+</section>
+
+<section class="card wide hidden" id="menuAdminCard">
+<h2>3. จัดการเมนูและราคา</h2>
+<p class="muted">เพิ่มเมนูใหม่หรือปรับราคาได้ พนักงานที่ได้รับอนุญาตจัดการเมนูได้ทั้งหมด (เปลี่ยนชื่อและราคาได้)</p>
+<div class="grid">
+<div class="field"><label for="newMenuName">ชื่อเมนู</label><input id="newMenuName" placeholder="เช่น ก๋วยเตี๋ยวหมู"></div>
+<div class="field"><label for="newMenuPrice">ราคา (บาท)</label><input id="newMenuPrice" type="number" min="0" step="0.5" placeholder="50"></div>
+</div>
+<button id="addMenu">เพิ่มเมนู</button>
+<div id="adminMenuList" class="list" style="margin-top:12px"></div>
+</section>
+<section class="card wide hidden" id="staffCard"><h2>4. จัดการพนักงาน</h2><p class="muted">ให้พนักงานสมัครบัญชีในแอปก่อน แล้วใส่อีเมลเดียวกันที่นี่เพื่ออนุญาตให้ใช้งาน</p><div class="field"><label for="staffEmail">อีเมลพนักงาน</label><input id="staffEmail" type="email" placeholder="name@example.com"></div><button id="addStaff">อนุญาตพนักงาน</button><div id="staffList" class="list" style="margin-top:12px"></div></section>
+<div class="footer wide">ข้อมูลเก็บบน Supabase · สำรองข้อมูลด้วย CSV เป็นระยะ</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script>
+(() => {
+const SUPABASE_URL = '', SUPABASE_KEY = ''; // ใส่ค่าตรงนี้ได้ จะได้ไม่ต้องกรอกทุกเครื่อง (publishable/anon key เท่านั้น)
+const $ = id => document.getElementById(id);
+const MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const CARDS = ['appCard','summaryCard','menuCard','historyCard','menuAdminCard','staffCard','pendingCard'];
+const PAY = {cash:'เงินสด',transfer:'เงินโอน',other:'อื่น ๆ'};
+let db=null,user=null,isOwner=false,allMenus=[],menus=[],cart={},sales=[],staff=[],token=null,busy=false;
+const fmt = n => new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB'}).format(Number(n||0));
+const pad = n => String(n).padStart(2,'0');
+const today = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const parts = s => s.split('-').map(Number);
+const thLong = s => { const [y,m,d]=parts(s); return `${d} ${MONTHS[m-1]} ${y+543}`; };
+const thShort = s => { const [y,m,d]=parts(s); return `${pad(d)}/${pad(m)}/${y+543}`; };
+const addDays = (s,n) => { const [y,m,d]=parts(s); return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10); };
+const tot = s => (s.sale_items||[]).reduce((a,i)=>a+i.quantity*Number(i.unit_price),0);
+const who = id => (staff.find(s=>s.user_id===id)||{}).email||'';
+function msg(id, text, error=false){$(id).textContent=text;$(id).className=error?'error':'muted';}
+
+// ---- ตัวเลือกวันที่: วัน เดือน ปี (พ.ศ.) ----
+function initDatePick(){
+ const y0=new Date().getFullYear();
+ $('dd').innerHTML=Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+ $('mm').innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');
+ $('yy').innerHTML=Array.from({length:7},(_,i)=>y0+1-i).map(y=>`<option value="${y}">${y+543}</option>`).join('');
+ setDate(today());
+ ['dd','mm','yy'].forEach(id=>$(id).onchange=()=>{clampDay();loadSales();});
+ $('period').onchange=()=>loadSales();
+}
+function clampDay(){const dim=new Date(Number($('yy').value),Number($('mm').value),0).getDate();if(Number($('dd').value)>dim)$('dd').value=dim;}
+function setDate(s){const [y,m,d]=parts(s);$('yy').value=y;$('mm').value=m;$('dd').value=d;}
+const getDate = () => `${$('yy').value}-${pad($('mm').value)}-${pad($('dd').value)}`;
+function range(){
+ const d=getDate(),p=$('period').value,first=d.slice(0,8)+'01';
+ if(p==='week')return [addDays(d,-6),d];
+ if(p==='month')return [first,addDays(addDays(first,32).slice(0,8)+'01',-1)];
+ return [d,d];
+}
+const label = () => {const [a,b]=range();return a===b?thLong(a):`${thShort(a)} – ${thShort(b)}`;};
+
+// ---- ตั้งค่าและเข้าสู่ระบบ ----
+function config(){return {url:SUPABASE_URL||localStorage.getItem('restaurant_sb_url')||'',key:SUPABASE_KEY||localStorage.getItem('restaurant_sb_key')||''};}
+function showApp(on){CARDS.forEach(id=>$(id).classList.toggle('hidden',!on));$('signOut').classList.toggle('hidden',!on);}
+function initDb(){
+ const c=config();
+ if(SUPABASE_URL&&SUPABASE_KEY)$('setupCard').classList.add('hidden');
+ if(!c.url||!c.key){msg('configMsg','กรอก URL และ publishable/anon key แล้วกดบันทึก');return;}
+ if(!window.supabase){msg('configMsg','โหลดไลบรารีไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรช',true);return;}
+ db=window.supabase.createClient(c.url,c.key);
+ $('configMsg').textContent='ตั้งค่าฐานข้อมูลแล้ว';
+ db.auth.getSession().then(({data})=>{if(data.session){user=data.session.user;afterLogin();}});
+}
+$('saveConfig').onclick=()=>{const url=$('supabaseUrl').value.trim().replace(/\/$/,''),key=$('supabaseKey').value.trim();if(!url.startsWith('https://')||!key){msg('configMsg','กรุณากรอก URL ที่ขึ้นต้นด้วย https:// และ key',true);return;}localStorage.setItem('restaurant_sb_url',url);localStorage.setItem('restaurant_sb_key',key);initDb();msg('configMsg','บันทึกการตั้งค่าแล้ว');};
+const c0=config();$('supabaseUrl').value=c0.url;$('supabaseKey').value=c0.key;
+$('signUp').onclick=async()=>{if(!db)return msg('authMsg','กรุณาตั้งค่าฐานข้อมูลก่อน',true);const email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6)return msg('authMsg','กรอกอีเมลและรหัสผ่านอย่างน้อย 6 ตัว',true);const {data,error}=await db.auth.signUp({email,password});if(error)return msg('authMsg',error.message,true);if(data.session){user=data.user;afterLogin();}else msg('authMsg','สร้างบัญชีแล้ว หากเปิดยืนยันอีเมลไว้ ให้ยืนยันจากอีเมลก่อนเข้าสู่ระบบ');};
+$('signIn').onclick=async()=>{if(!db)return msg('authMsg','กรุณาตั้งค่าฐานข้อมูลก่อน',true);const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg('authMsg',error.message,true);user=data.user;afterLogin();};
+$('signOut').onclick=async()=>{await db.auth.signOut();user=null;isOwner=false;showApp(false);msg('authMsg','ออกจากระบบแล้ว');};
+async function afterLogin(){
+ const {data:role}=await db.rpc('my_role');
+ const ok=!!role;isOwner=role==='owner';
+ $('signOut').classList.remove('hidden');
+ $('signedInAs').textContent=user.email||'เข้าสู่ระบบแล้ว';
+ msg('authMsg','เข้าสู่ระบบสำเร็จ');
+ CARDS.forEach(id=>$(id).classList.toggle('hidden',!ok));
+ $('staffCard').classList.toggle('hidden',!(ok&&isOwner));
+ if(!ok){
+  const {data:has}=await db.rpc('has_owner');
+  $('pendingCard').classList.remove('hidden');
+  $('claimOwner').classList.toggle('hidden',!!has);
+  $('pendingTxt').textContent=has?'บัญชีนี้ยังไม่ได้รับอนุญาต ให้เจ้าของร้านเพิ่มอีเมลของคุณในส่วน “จัดการพนักงาน”':'ยังไม่มีเจ้าของร้านในระบบ กดปุ่มด้านล่างเพื่อตั้งบัญชีนี้เป็นเจ้าของ';
+  return;
+ }
+ await loadStaff();await loadMenus();await loadSales();
+}
+$('claimOwner').onclick=async()=>{const {error}=await db.rpc('claim_owner');if(error)return alert(error.message);afterLogin();};
+
+// ---- พนักงาน ----
+async function loadStaff(){const {data}=await db.from('staff').select('user_id,email,role').order('created_at');staff=data||[];renderStaff();}
+function renderStaff(){
+ const el=$('staffList');el.innerHTML='';if(!isOwner)return;
+ staff.forEach(s=>{const div=document.createElement('div');div.className='entry row';const l=document.createElement('div');l.textContent=`${s.email} · ${s.role==='owner'?'เจ้าของ':'พนักงาน'}`;div.append(l);
+  if(s.role!=='owner'){const b=document.createElement('button');b.className='secondary';b.textContent='นำออก';b.onclick=async()=>{if(!confirm('นำ '+s.email+' ออกจากร้าน?'))return;const {error}=await db.rpc('remove_staff',{p_user:s.user_id});if(error)alert(error.message);else loadStaff();};div.append(b);}
+  el.append(div);});
+}
+$('addStaff').onclick=async()=>{const email=$('staffEmail').value.trim();if(!email)return;const {error}=await db.rpc('add_staff',{p_email:email});if(error)return alert(error.message);$('staffEmail').value='';await loadStaff();};
+
+// ---- เมนู ----
+async function loadMenus(){
+ const {data,error}=await db.from('menu_items').select('*').order('name');
+ if(error){msg('saleMsg','โหลดเมนูไม่สำเร็จ: '+error.message,true);return;}
+ allMenus=data||[];menus=allMenus.filter(m=>m.active);
+ if(!menus.length)$('menuList').innerHTML='<p class="notice">ยังไม่มีเมนู กรุณาเพิ่มเมนูในส่วน “จัดการเมนูและราคา” ด้านล่าง</p>';
+ renderMenus();renderAdminMenus();
+}
+function renderMenus(){
+ const el=$('menuList');if(menus.length)el.innerHTML='';
+ menus.forEach(m=>{const n=cart[m.id]||0;const div=document.createElement('div');div.className='menu-item';div.innerHTML=`<div><strong></strong><small>${fmt(m.price)} / รายการ</small></div><div class="qty"><button class="secondary minus" aria-label="ลดจำนวน">−</button><span>${n}</span><button class="plus" aria-label="เพิ่มจำนวน">+</button></div>`;div.querySelector('strong').textContent=m.name;div.querySelector('.minus').onclick=()=>{cart[m.id]=Math.max(0,n-1);renderMenus();};div.querySelector('.plus').onclick=()=>{cart[m.id]=n+1;renderMenus();};el.appendChild(div);});
+ $('cartTotal').textContent=fmt(menus.reduce((s,m)=>s+(cart[m.id]||0)*Number(m.price),0));
+}
+function renderAdminMenus(){
+ const el=$('adminMenuList');el.innerHTML='';
+ allMenus.forEach(m=>{const div=document.createElement('div');div.className='entry';if(!m.active)div.style.opacity='.6';const row=document.createElement('div');row.className='row';const l=document.createElement('div');l.textContent=`${m.name} · ${fmt(m.price)}${m.active?'':' (ซ่อนอยู่)'}`;
+  const bs=document.createElement('div');bs.className='qty';
+  const b1=document.createElement('button');b1.className='secondary';b1.textContent='เปลี่ยนราคา';b1.onclick=async()=>{const raw=prompt('ใส่ราคาใหม่สำหรับ '+m.name,m.price);if(raw===null)return;const p=Number(raw);if(!Number.isFinite(p)||p<0)return alert('ราคาไม่ถูกต้อง');const {error}=await db.from('menu_items').update({price:p}).eq('id',m.id);if(error)alert('แก้ไขไม่สำเร็จ: '+error.message);else await loadMenus();};
+  const b2=document.createElement('button');b2.className='secondary';b2.textContent='เปลี่ยนชื่อ';b2.onclick=async()=>{const raw=prompt('ใส่ชื่อใหม่สำหรับ '+m.name,m.name);if(raw===null)return;const name=raw.trim();if(!name)return alert('ชื่อเมนูว่างไม่ได้');if(name===m.name)return;const {error}=await db.from('menu_items').update({name}).eq('id',m.id);if(error)alert('แก้ไขไม่สำเร็จ: '+error.message);else await loadMenus();};
+  bs.append(b1,b2);row.append(l,bs);div.append(row);el.append(div);});
+}
+$('addMenu').onclick=async()=>{
+ const name=$('newMenuName').value.trim(),price=Number($('newMenuPrice').value);
+ if(!name||!Number.isFinite(price)||price<0)return msg('saleMsg','กรอกชื่อเมนูและราคาที่ถูกต้อง',true);
+ const {error}=await db.from('menu_items').insert({name,price,active:true,created_by:user.id});
+ if(error)return msg('saleMsg','เพิ่มเมนูไม่สำเร็จ: '+error.message,true);
+ $('newMenuName').value='';$('newMenuPrice').value='';await loadMenus();msg('saleMsg','เพิ่มเมนูแล้ว');
+};
+
+// ---- ยอดขาย ----
+async function loadSales(){
+ if(!db||!user)return;
+ const [a,b]=range();
+ const {data,error}=await db.from('sales').select('id,sold_at,sale_date,payment_method,note,created_by,voided,void_reason,sale_items(id,quantity,unit_price,menu_name)').eq('voided',false).gte('sale_date',a).lte('sale_date',b).order('sold_at',{ascending:false}).limit(1000);
+ if(error){msg('saleMsg','โหลดรายการไม่สำเร็จ: '+error.message,true);return;}
+ sales=data||[];renderSales();
+}
+function renderSales(){
+ const [ra,rb]=range();let gross=0,cash=0,transfer=0,count=0;const by={};
+ sales.filter(s=>!s.voided).forEach(s=>{const t=tot(s);gross+=t;if(s.payment_method==='cash')cash+=t;else if(s.payment_method==='transfer')transfer+=t;(s.sale_items||[]).forEach(i=>{count+=i.quantity;const k=by[i.menu_name]||(by[i.menu_name]={q:0,a:0});k.q+=i.quantity;k.a+=i.quantity*Number(i.unit_price);});});
+ $('grossTotal').textContent=fmt(gross);$('cashTotal').textContent=fmt(cash);$('transferTotal').textContent=fmt(transfer);$('itemCount').textContent=count.toLocaleString('th-TH');
+ document.querySelectorAll('.pl').forEach(e=>e.textContent=label());
+ const sm=$('menuSummary');sm.innerHTML='';
+ const names=Object.keys(by).sort((x,y)=>by[y].q-by[x].q);
+ if(!names.length)sm.innerHTML='<p class="muted">ยังไม่มีข้อมูลในช่วงนี้</p>';
+ names.forEach(n=>{const d=document.createElement('div');d.className='entry row';const l=document.createElement('div');l.textContent=`${n} × ${by[n].q.toLocaleString('th-TH')}`;const r=document.createElement('strong');r.textContent=fmt(by[n].a);d.append(l,r);sm.append(d);});
+ const el=$('salesList');el.innerHTML='';
+ if(!sales.length){el.innerHTML='<p class="muted">ยังไม่มีรายการขายในช่วงนี้</p>';return;}
+ sales.forEach(s=>{
+  const div=document.createElement('div');div.className='entry'+(s.voided?' void':'');
+  const title=document.createElement('h3');title.textContent=(ra!==rb?thShort(s.sale_date)+' ':'')+new Date(s.sold_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' · '+fmt(tot(s));
+  const p=document.createElement('p');p.textContent=(s.sale_items||[]).map(i=>`${i.menu_name} × ${i.quantity}`).join(', ');
+  const meta=document.createElement('p');meta.className='muted';
+  meta.textContent=(PAY[s.payment_method]||s.payment_method)+(s.note?' · '+s.note:'')+(who(s.created_by)?' · '+who(s.created_by):'')+(s.voided?' · ยกเลิกแล้ว'+(s.void_reason?': '+s.void_reason:''):'');
+  div.append(title,p,meta);
+  if(!s.voided){const b=document.createElement('button');b.className='danger';b.style.padding='7px 11px';b.textContent='เคลียร์บิล';b.onclick=()=>deleteSale(s);div.append(b);}
+  el.appendChild(div);
+ });
+}
+async function deleteSale(s){
+ if(!confirm('เคลียร์บิลนี้ (ยอด '+fmt(tot(s))+') ออกจากระบบ?\nบิลจะหายจากรายการและ CSV ถาวร กู้คืนไม่ได้'))return;
+ const {error}=await db.rpc('delete_sale',{p_sale_id:s.id});
+ if(error)return msg('saleMsg','เคลียร์ไม่สำเร็จ: '+error.message,true);
+ await loadSales();msg('saleMsg','เคลียร์บิลแล้ว');
+}
+$('saveSale').onclick=async()=>{
+ if(busy)return;
+ const items=menus.filter(m=>(cart[m.id]||0)>0).map(m=>({menu_item_id:m.id,quantity:cart[m.id]}));
+ if(!items.length)return msg('saleMsg','เลือกจำนวนอย่างน้อย 1 เมนูก่อนบันทึก',true);
+ busy=true;$('saveSale').disabled=true;token=token||crypto.randomUUID();
+ const {error}=await db.rpc('create_sale',{p_sale_date:getDate(),p_payment:$('payment').value,p_note:$('note').value.trim()||null,p_items:items,p_token:token});
+ busy=false;$('saveSale').disabled=false;
+ if(error)return msg('saleMsg','บันทึกไม่สำเร็จ: '+error.message+' (กดบันทึกใหม่ได้ ระบบจะไม่สร้างบิลซ้ำ)',true);
+ token=null;cart={};$('note').value='';renderMenus();await loadSales();msg('saleMsg','บันทึกรายการขายแล้ว ✓');
+};
+$('refresh').onclick=async()=>{await loadStaff();await loadMenus();await loadSales();};
+$('exportCsv').onclick=()=>{
+ const safe=v=>{const t=String(v??'');return /^[=+\-@\t\r]/.test(t)?"'"+t:t;};
+ const F=t=>({f:t}); // ข้อความล้วน กัน Excel แปลงเป็นวันที่จนขึ้น ####
+ const rows=[['วันที่','เวลา','ช่องทางชำระ','หมายเหตุ','ผู้บันทึก','เมนู','จำนวน','ราคาต่อหน่วย','รวม']];
+ let cur=null,q=0,sum=0,gq=0,gs=0;
+ const flush=()=>{if(cur!==null)rows.push([F(thShort(cur)),'','','','','รวมทั้งวัน',q,'',sum]);};
+ sales.slice().sort((x,y)=>x.sold_at<y.sold_at?-1:1).forEach(s=>{
+  if(s.sale_date!==cur){flush();cur=s.sale_date;q=0;sum=0;}
+  (s.sale_items||[]).forEach(i=>{const t=i.quantity*Number(i.unit_price);rows.push([F(thShort(s.sale_date)),new Date(s.sold_at).toLocaleTimeString('th-TH'),PAY[s.payment_method]||s.payment_method,s.note||'',who(s.created_by),i.menu_name,i.quantity,i.unit_price,t]);q+=i.quantity;sum+=t;gq+=i.quantity;gs+=t;});
+ });
+ flush();
+ const [a,b]=range();
+ if(a!==b)rows.push(['รวมทั้งช่วง','','','','','',gq,'',gs]);
+ const cell=v=>v&&v.f?'"=""'+v.f+'"""':'"'+safe(v).replace(/"/g,'""')+'"';
+ const csv='\uFEFF'+rows.map(r=>r.map(cell).join(',')).join('\r\n');
+ const el=document.createElement('a');el.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));el.download='restaurant-sales-'+a+(a===b?'':'_to_'+b)+'.csv';el.click();URL.revokeObjectURL(el.href);
+};
+initDatePick();
+initDb();
+})();
+</script>
+</body>
+</html>
